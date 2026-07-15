@@ -193,7 +193,7 @@ export default function CompareReport({
             </div>
           </div>
         </div>
-        <div className="eyebrow">PXM Comparison Report</div>
+        <div className="eyebrow">PXM Performance Comparison</div>
         <h1 className="report-h1">{brandName}</h1>
       </div>
 

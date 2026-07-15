@@ -304,7 +304,7 @@ export default function Home() {
           }}
         >
           <h2 style={{ fontSize: 16, margin: "0 0 4px 0", color: "var(--navy)" }}>
-            PXM Value Report Generator
+            PXM Performance Report Generator
           </h2>
           <p style={{ fontSize: 12.5, color: "var(--slate)", margin: "0 0 18px 0" }}>
             Upload a brand&apos;s activity-metrics export. Everything runs in your

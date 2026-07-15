@@ -187,7 +187,7 @@ export default function Report({ metrics: m, config }: ReportProps) {
             ({nDays} days)
           </div>
         </div>
-        <div className="eyebrow">PXM Activity &amp; Value Report</div>
+        <div className="eyebrow">PXM Performance Report</div>
         <h1 className="report-h1">{brandName}</h1>
       </div>
 
@@ -248,7 +248,8 @@ export default function Report({ metrics: m, config }: ReportProps) {
                   <BreakdownTable entries={m.updates.byAction} />
                 </div>
               )}
-              {m.updates.byChangeSource.length > 0 && (
+              {m.updates.byChangeSource.length > 0 &&
+                JSON.stringify(m.updates.byChangeSource) !== JSON.stringify(m.updates.byAction) && (
                 <div className="detail-block">
                   <div className="section-title">By Change Source</div>
                   <BreakdownTable entries={m.updates.byChangeSource} />
@@ -562,22 +563,33 @@ export default function Report({ metrics: m, config }: ReportProps) {
         </div>
       )}
 
-      {/* Top contributors (global) */}
-      {m.top_contributors.length > 0 && (
-        <div className="sheet-section">
-          <SectionHeader title="Top Contributors" />
-          <div className="sheet-section-body">
-            <div className="detail-grid">
-              <div className="detail-block">
-                <ContributorsTable
-                  contributors={m.top_contributors}
-                  teamNames={teamNames}
-                />
+      {/* Top contributors (global) — only show when multiple sheets have contributor data */}
+      {(() => {
+        const sheetsWithContribs = [
+          m.updates?.contributors,
+          m.imports?.contributors,
+          m.syndications?.contributors,
+          m.shares?.contributors,
+          m.file_downloads?.contributors,
+          m.product_downloads?.contributors,
+        ].filter((c) => c && c.length > 0);
+        if (sheetsWithContribs.length <= 1 || m.top_contributors.length === 0) return null;
+        return (
+          <div className="sheet-section">
+            <SectionHeader title="Top Contributors" />
+            <div className="sheet-section-body">
+              <div className="detail-grid">
+                <div className="detail-block">
+                  <ContributorsTable
+                    contributors={m.top_contributors}
+                    teamNames={teamNames}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Footer */}
       <div className="report-footer">

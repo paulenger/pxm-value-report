@@ -5,9 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PXM Value Report Generator",
+  title: "PXM Performance Report Generator",
   description:
-    "Generate professional PXM activity and value reports from your data export.",
+    "Generate professional PXM activity and performance reports from your data export.",
 };
 
 export default function RootLayout({

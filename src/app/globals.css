@@ -31,11 +31,11 @@ body {
 /* ===== REPORT PAGE ===== */
 .report-page {
   width: 816px;
-  min-height: 1056px;
   margin: 0 auto;
   background: #fff;
-  position: relative;
-  padding: 16px 52px 80px 52px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 52px 0 52px;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
@@ -423,12 +423,9 @@ body {
 
 /* Footer */
 .report-footer {
-  position: absolute;
-  bottom: 16px;
-  left: 52px;
-  right: 52px;
+  margin-top: auto;
+  padding: 12px 0 20px 0;
   border-top: 1px solid var(--grid);
-  padding-top: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -603,6 +600,7 @@ body {
     box-shadow: none;
     margin: 0;
     width: 100%;
+    min-height: 100vh;
   }
 
   @page {
