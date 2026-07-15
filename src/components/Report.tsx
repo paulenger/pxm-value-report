@@ -5,8 +5,8 @@ import type { Metrics, ReportConfig } from "@/lib/types";
 import { fmtNum, fmtDate, counterMostCommonExport } from "@/lib/parseWorkbook";
 
 const STATUS_COLORS: Record<string, string> = {
-  ACCEPTED: "var(--p-blue)",
-  "PARTIAL ACCEPTED": "var(--p-blue-light)",
+  ACCEPTED: "#0096fa",
+  "PARTIAL ACCEPTED": "#60c0ff",
   DRAFT: "#C9D2D6",
   "IN PROGRESS": "var(--amber)",
   REJECTED: "var(--red)",
@@ -191,11 +191,10 @@ export default function Report({ metrics: m, config }: ReportProps) {
             ) : (
               <>
                 <div className="brand-badge">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="3" width="7" height="7" rx="1.4" fill="#fff" />
-                    <rect x="14" y="3" width="7" height="7" rx="1.4" fill="#fff" opacity="0.55" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.4" fill="#fff" opacity="0.55" />
-                    <rect x="14" y="14" width="7" height="7" rx="1.4" fill="#fff" />
+                  {/* Pattern chevron mark — white on dark badge */}
+                  <svg viewBox="0 0 334 254" fill="none" style={{ width: 18, height: 14 }}>
+                    <path d="M2.35216 192.898L193.845 2.38697C196.982-0.733156 202.147-0.733156 205.283 2.38697L252.419 49.2806C255.555 52.4925 255.555 57.5398 252.419 60.6599L60.9255 251.171C57.697 254.291 52.6237 254.291 49.4875 251.171L2.35216 204.277C-0.784052 201.157-0.784052 196.018 2.35216 192.898Z" fill="white"/>
+                    <path d="M160.087 192.9L272.714 80.8504C275.85 77.7302 281.015 77.7302 284.151 80.8504L331.287 127.744C334.423 130.956 334.423 136.003 331.287 139.123L218.66 251.172C215.432 254.293 210.358 254.293 207.222 251.172L160.087 204.279C156.951 201.159 156.951 196.02 160.087 192.9Z" fill="white" opacity="0.7"/>
                   </svg>
                 </div>
                 <div className="brand-word">
@@ -405,16 +404,10 @@ export default function Report({ metrics: m, config }: ReportProps) {
       {/* Footer */}
       <div className="report-footer">
         <div className="footer-left">
-          <svg viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="7.5" height="7.5" rx="1.5" fill="#8493A0" />
-            <rect x="9.25" y="0" width="7.5" height="7.5" rx="1.5" fill="#8493A0" opacity="0.55" />
-            <rect x="18.5" y="0" width="7.5" height="7.5" rx="1.5" fill="#8493A0" />
-            <rect x="0" y="9.25" width="7.5" height="7.5" rx="1.5" fill="#8493A0" opacity="0.55" />
-            <rect x="9.25" y="9.25" width="7.5" height="7.5" rx="1.5" fill="#8493A0" />
-            <rect x="18.5" y="9.25" width="7.5" height="7.5" rx="1.5" fill="#8493A0" opacity="0.55" />
-            <rect x="0" y="18.5" width="7.5" height="7.5" rx="1.5" fill="#8493A0" />
-            <rect x="9.25" y="18.5" width="7.5" height="7.5" rx="1.5" fill="#8493A0" opacity="0.55" />
-            <rect x="18.5" y="18.5" width="7.5" height="7.5" rx="1.5" fill="#8493A0" />
+          {/* Pattern chevron mark — muted for footer */}
+          <svg viewBox="0 0 334 254" fill="none" style={{ width: 16, height: 12 }}>
+            <path d="M2.35216 192.898L193.845 2.38697C196.982-0.733156 202.147-0.733156 205.283 2.38697L252.419 49.2806C255.555 52.4925 255.555 57.5398 252.419 60.6599L60.9255 251.171C57.697 254.291 52.6237 254.291 49.4875 251.171L2.35216 204.277C-0.784052 201.157-0.784052 196.018 2.35216 192.898Z" fill="#8493A0"/>
+            <path d="M160.087 192.9L272.714 80.8504C275.85 77.7302 281.015 77.7302 284.151 80.8504L331.287 127.744C334.423 130.956 334.423 136.003 331.287 139.123L218.66 251.172C215.432 254.293 210.358 254.293 207.222 251.172L160.087 204.279C156.951 201.159 156.951 196.02 160.087 192.9Z" fill="#8493A0" opacity="0.55"/>
           </svg>
           <span>
             Prepared by {csmName} &middot; Pattern PXM Customer Success

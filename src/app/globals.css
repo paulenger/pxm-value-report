@@ -10,11 +10,11 @@
   --red-dark: #8a2e23;
   --grid: #e4e8ea;
   --panel: #f4f7f7;
-  --p-blue: #3d5eff;
-  --p-blue-light: #5aa7ff;
-  --p-purple: #6e2fe0;
-  --p-dark: #130b2a;
-  --p-glow: #57a8ff;
+  --p-blue: #0096fa;
+  --p-blue-light: #60c0ff;
+  --p-purple: #770bff;
+  --p-dark: #0a0520;
+  --p-glow: #80d4ff;
 }
 
 * {
