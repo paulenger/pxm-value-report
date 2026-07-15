@@ -225,7 +225,7 @@ export default function Home() {
   // Report view
   if (view === "report" && metrics && config) {
     return (
-      <div style={{ background: "#eef1f2", minHeight: "100vh", padding: "28px 0" }}>
+      <div className="report-wrapper" style={{ background: "#eef1f2", minHeight: "100vh", padding: "28px 0" }}>
         <div
           className="no-print"
           style={{
@@ -254,7 +254,7 @@ export default function Home() {
     const lA = labelAOverride || autoLabel(metricsA);
     const lB = labelBOverride || autoLabel(metricsB);
     return (
-      <div style={{ background: "#eef1f2", minHeight: "100vh", padding: "28px 0" }}>
+      <div className="report-wrapper" style={{ background: "#eef1f2", minHeight: "100vh", padding: "28px 0" }}>
         <div
           className="no-print"
           style={{
@@ -304,7 +304,7 @@ export default function Home() {
           }}
         >
           <h2 style={{ fontSize: 16, margin: "0 0 4px 0", color: "var(--navy)" }}>
-            PXM Performance Report Generator
+            PXM Activity Summary Generator
           </h2>
           <p style={{ fontSize: 12.5, color: "var(--slate)", margin: "0 0 18px 0" }}>
             Upload a brand&apos;s activity-metrics export. Everything runs in your
@@ -601,7 +601,7 @@ const backBtnStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
   cursor: "pointer",
-  fontFamily: "inherit",
+  fontFamily: "Inter, 'Apple Symbols', 'Segoe UI Symbol', sans-serif",
 };
 
 const printBtnStyle: React.CSSProperties = {

@@ -13,7 +13,7 @@ interface CompareReportProps {
 }
 
 function delta(a: number, b: number): React.ReactNode {
-  if (a === 0 && b === 0) return <span className="delta-neutral">—</span>;
+  if (a === 0 && b === 0) return <span className="delta-neutral">-</span>;
   const diff = b - a;
   if (diff === 0) return <span className="delta-neutral">0</span>;
   const pct = a !== 0 ? Math.round((diff / a) * 100) : null;
@@ -130,7 +130,7 @@ export default function CompareReport({
     .slice(0, 10);
 
   const FooterMark = () => (
-    <svg viewBox="0 0 334 254" fill="none" style={{ width: 16, height: 12 }}>
+    <svg viewBox="0 0 334 254" fill="none" style={{ width: 18, height: 14 }}>
       <path
         d="M2.35216 192.898L193.845 2.38697C196.982-0.733156 202.147-0.733156 205.283 2.38697L252.419 49.2806C255.555 52.4925 255.555 57.5398 252.419 60.6599L60.9255 251.171C57.697 254.291 52.6237 254.291 49.4875 251.171L2.35216 204.277C-0.784052 201.157-0.784052 196.018 2.35216 192.898Z"
         fill="#8493A0"
@@ -193,7 +193,7 @@ export default function CompareReport({
             </div>
           </div>
         </div>
-        <div className="eyebrow">PXM Performance Comparison</div>
+        <div className="eyebrow">PXM Activity Comparison</div>
         <h1 className="report-h1">{brandName}</h1>
       </div>
 
@@ -222,17 +222,17 @@ export default function CompareReport({
               <tr>
                 <td>Syndication Success Rate</td>
                 <td className="num">
-                  {(mA.syndications?.total ?? 0) > 0 ? `${synARate}%` : "—"}
+                  {(mA.syndications?.total ?? 0) > 0 ? `${synARate}%` : "-"}
                 </td>
                 <td className="num">
-                  {(mB.syndications?.total ?? 0) > 0 ? `${synBRate}%` : "—"}
+                  {(mB.syndications?.total ?? 0) > 0 ? `${synBRate}%` : "-"}
                 </td>
                 <td className="num">
                   {(mA.syndications?.total ?? 0) > 0 &&
                   (mB.syndications?.total ?? 0) > 0 ? (
                     delta(synARate, synBRate)
                   ) : (
-                    <span className="delta-neutral">—</span>
+                    <span className="delta-neutral">-</span>
                   )}
                 </td>
               </tr>
@@ -271,8 +271,8 @@ export default function CompareReport({
                         name
                       )}
                     </td>
-                    <td className="num">{a > 0 ? fmtNum(a) : "—"}</td>
-                    <td className="num">{b > 0 ? fmtNum(b) : "—"}</td>
+                    <td className="num">{a > 0 ? fmtNum(a) : "-"}</td>
+                    <td className="num">{b > 0 ? fmtNum(b) : "-"}</td>
                     <td
                       style={{
                         fontSize: 10,
