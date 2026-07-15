@@ -410,15 +410,20 @@ export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
   const fileDownloadsTotal = fileDownloadsData?.total ?? 0;
   const productDownloadsTotal = productDownloadsData?.total ?? 0;
 
+  const fileSharesTotal = fileSharesData?.total ?? 0;
+
   const clientSideActivityTotal =
-    fileDownloadsTotal + productDownloadsTotal + sharesTotal;
+    fileDownloadsTotal + productDownloadsTotal + sharesTotal + fileSharesTotal;
   const totalPlatformActions =
     updatesTotal +
     importsTotal +
     syndicationsTotal +
     productsCreatedTotal +
     filesUploadedTotal +
-    sharesTotal;
+    sharesTotal +
+    fileDownloadsTotal +
+    productDownloadsTotal +
+    fileSharesTotal;
 
   return {
     period_start: periodStart,

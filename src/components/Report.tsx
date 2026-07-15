@@ -154,6 +154,7 @@ export default function Report({ metrics: m, config }: ReportProps) {
     m.shares?.total ? { label: "Shares", value: m.shares.total } : null,
     m.file_downloads?.total ? { label: "File Downloads", value: m.file_downloads.total } : null,
     m.product_downloads?.total ? { label: "Product Downloads", value: m.product_downloads.total } : null,
+    m.file_shares?.total ? { label: "File Shares", value: m.file_shares.total } : null,
   ].filter(Boolean) as { label: string; value: number }[];
 
   const FooterMark = () => (
