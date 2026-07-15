@@ -1,23 +1,76 @@
+export interface UpdatesData {
+  total: number;
+  byAction: [string, number][];
+  byChangeSource: [string, number][];
+  contributors: [string, number][];
+  weekly: [string, number][];
+}
+export interface ImportsData {
+  total: number;
+  byType: [string, number][];
+  processedTotal: number;
+  contributors: [string, number][];
+  weekly: [string, number][];
+}
+export interface SyndicationsData {
+  total: number;
+  byStatus: Record<string, number>;
+  bySyndicationType: [string, number][];
+  successRate: number;
+  contributors: [string, number][];
+  weekly: [string, number][];
+}
+export interface FilesUploadedData {
+  total: number;
+  byDomain: [string, number][];
+  weekly: [string, number][];
+}
+export interface ProductsCreatedData {
+  total: number;
+  byDomain: [string, number][];
+  weekly: [string, number][];
+}
+export interface SharesData {
+  total: number;
+  byAction: [string, number][];
+  contributors: [string, number][];
+  weekly: [string, number][];
+}
+export interface FileDownloadsData {
+  total: number;
+  byFileName: [string, number][];
+  byType: [string, number][];
+  contributors: [string, number][];
+  weekly: [string, number][];
+}
+export interface ProductDownloadsData {
+  total: number;
+  byProductName: [string, number][];
+  contributors: [string, number][];
+  weekly: [string, number][];
+}
+export interface FileSharesData {
+  total: number;
+  byShareType: [string, number][];
+  bySender: [string, number][];
+  weekly: [string, number][];
+}
 export interface Metrics {
   period_start: Date | null;
   period_end: Date | null;
-  products_created: number;
-  files_uploaded: number;
-  updates_total: number;
-  update_action_breakdown: Record<string, number>;
-  imports_total: number;
-  import_type_breakdown: Record<string, number>;
-  syndications_total: number;
-  syndication_status_breakdown: Record<string, number>;
-  syndication_success_rate: number | null;
-  shares_total: number;
-  file_shares_total: number;
-  file_downloads_total: number;
-  product_downloads_total: number;
-  top_contributors: [string, number][];
-  weekly_activity: [string, number][];
-  client_side_activity_total: number;
   total_platform_actions: number;
+  client_side_activity_total: number;
+  weekly_activity: [string, number][];
+  top_contributors: [string, number][];
+  updates: UpdatesData | null;
+  imports: ImportsData | null;
+  syndications: SyndicationsData | null;
+  files_uploaded: FilesUploadedData | null;
+  products_created: ProductsCreatedData | null;
+  shares: SharesData | null;
+  file_downloads: FileDownloadsData | null;
+  product_downloads: ProductDownloadsData | null;
+  file_shares: FileSharesData | null;
 }
 
 export interface ReportConfig {

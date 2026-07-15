@@ -1,5 +1,16 @@
 import * as XLSX from "xlsx";
-import type { Metrics } from "./types";
+import type {
+  Metrics,
+  UpdatesData,
+  ImportsData,
+  SyndicationsData,
+  FilesUploadedData,
+  ProductsCreatedData,
+  SharesData,
+  FileDownloadsData,
+  ProductDownloadsData,
+  FileSharesData,
+} from "./types";
 
 const EXCLUDED_USERS = new Set([null, "", "System Generated", "Support Team"]);
 const SHEET_NAMES = [
@@ -17,7 +28,7 @@ const SHEET_NAMES = [
 function sheetRows(
   wb: XLSX.WorkBook,
   name: string
-): { header: unknown[]; rows: unknown[][] } {
+): { header: string[]; rows: unknown[][] } {
   if (!wb.SheetNames.includes(name)) return { header: [], rows: [] };
   const ws = wb.Sheets[name];
   const all = XLSX.utils.sheet_to_json(ws, {
@@ -25,7 +36,7 @@ function sheetRows(
     defval: null,
   }) as unknown[][];
   if (!all.length) return { header: [], rows: [] };
-  const header = all[0];
+  const header = (all[0] as unknown[]).map((h) => String(h ?? ""));
   const rows = all
     .slice(1)
     .filter((r) => r.some((v) => v !== null && v !== undefined && v !== ""));
@@ -52,22 +63,72 @@ function counter(arr: unknown[]): Record<string, number> {
   for (const v of arr) {
     if (v === null || v === undefined) continue;
     const key = String(v);
+    if (!key) continue;
     c[key] = (c[key] || 0) + 1;
   }
   return c;
 }
 
-function counterMostCommon(c: Record<string, number>): [string, number][] {
+function sorted(c: Record<string, number>): [string, number][] {
   return Object.entries(c).sort((a, b) => b[1] - a[1]);
 }
 
+function counterMostCommon(c: Record<string, number>): [string, number][] {
+  return sorted(c);
+}
+
+function computeWeekly(
+  rows: unknown[][],
+  periodStart: Date | null
+): [string, number][] {
+  if (!periodStart) return [];
+  const weekly: Record<string, number> = {};
+  for (const r of rows) {
+    const d = toDate((r as unknown[])[0]);
+    if (!d) continue;
+    const daysIn = Math.floor(
+      (d.getTime() - periodStart.getTime()) / 86400000
+    );
+    const weekIdx = Math.floor(daysIn / 7);
+    const weekStart = new Date(
+      periodStart.getTime() + weekIdx * 7 * 86400000
+    );
+    const key = dayKey(weekStart);
+    weekly[key] = (weekly[key] || 0) + 1;
+  }
+  return Object.entries(weekly).sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+function getContributors(
+  rows: unknown[][],
+  header: string[]
+): [string, number][] {
+  // Look for User, Sender, or User Email column
+  const userColNames = ["User", "Sender", "User Email"];
+  let uidx = -1;
+  for (const colName of userColNames) {
+    const idx = header.indexOf(colName);
+    if (idx >= 0) {
+      uidx = idx;
+      break;
+    }
+  }
+  if (uidx < 0) return [];
+  const contrib: Record<string, number> = {};
+  for (const r of rows) {
+    const u = (r as unknown[])[uidx] as string | null;
+    if (EXCLUDED_USERS.has(u)) continue;
+    if (!u) continue;
+    contrib[u] = (contrib[u] || 0) + 1;
+  }
+  return sorted(contrib);
+}
+
 export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
-  const sheets: Record<
-    string,
-    { header: unknown[]; rows: unknown[][] }
-  > = {};
+  const sheets: Record<string, { header: string[]; rows: unknown[][] }> = {};
   for (const n of SHEET_NAMES) sheets[n] = sheetRows(wb, n);
 
+  // Determine period range across all sheets
   const allDates: Date[] = [];
   for (const n of SHEET_NAMES) {
     const { rows } = sheets[n];
@@ -80,61 +141,220 @@ export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
   const periodStart = allDates.length ? allDates[0] : null;
   const periodEnd = allDates.length ? allDates[allDates.length - 1] : null;
 
-  const productsCreated = sheets["Products Created"].rows.length;
-  const filesUploaded = sheets["Files Uploaded"].rows.length;
+  // ---- Updates ----
+  let updatesData: UpdatesData | null = null;
+  {
+    const { header, rows } = sheets["Updates"];
+    if (rows.length > 0) {
+      const actionIdx = header.indexOf("Update Action");
+      const changeSourceIdx = header.indexOf("Change Source");
+      const processedCountIdx = header.indexOf("Processed Count");
 
-  const updatesHeader = sheets["Updates"].header;
-  const updatesRows = sheets["Updates"].rows;
-  const actionIdx = (updatesHeader as string[]).indexOf("Update Action");
-  const updatesTotal = updatesRows.length;
-  const updateActionBreakdown = counter(
-    updatesRows.map((r) => (actionIdx >= 0 ? (r as unknown[])[actionIdx] : null))
-  );
+      const byAction = sorted(
+        counter(rows.map((r) => (actionIdx >= 0 ? (r as unknown[])[actionIdx] : null)))
+      );
+      const byChangeSource = changeSourceIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[changeSourceIdx])))
+        : [];
 
-  const importsHeader = sheets["Imports"].header;
-  const importsRows = sheets["Imports"].rows;
-  const typeIdx = (importsHeader as string[]).indexOf("Import Type");
-  const importsTotal = importsRows.length;
-  const importTypeBreakdown = counter(
-    importsRows.map((r) => (typeIdx >= 0 ? (r as unknown[])[typeIdx] : null))
-  );
+      // Remove empty change source entries
+      const byChangeSourceFiltered = byChangeSource.filter(([k]) => k !== "null" && k !== "");
 
-  const synHeader = sheets["Syndications"].header;
-  const synRows = sheets["Syndications"].rows;
-  const statusIdx = (synHeader as string[]).indexOf("Status");
-  const syndicationsTotal = synRows.length;
-  const syndicationStatusBreakdown = counter(
-    synRows.map((r) => (statusIdx >= 0 ? (r as unknown[])[statusIdx] : null))
-  );
-  const successStatuses = new Set(["ACCEPTED", "PARTIAL ACCEPTED"]);
-  let success = 0;
-  for (const [k, v] of Object.entries(syndicationStatusBreakdown)) {
-    if (successStatuses.has(k)) success += v;
-  }
-  const syndicationSuccessRate = syndicationsTotal
-    ? success / syndicationsTotal
-    : null;
+      // Processed Count sum (not typically on Updates but handle gracefully)
+      void processedCountIdx;
 
-  const sharesTotal = sheets["Shares"].rows.length;
-  const fileSharesTotal = sheets["File Shares"].rows.length;
-  const fileDownloadsTotal = sheets["File Downloads"].rows.length;
-  const productDownloadsTotal = sheets["Product Downloads"].rows.length;
-
-  const contrib: Record<string, number> = {};
-  for (const sn of ["Updates", "Imports", "Syndications"]) {
-    const { header, rows } = sheets[sn];
-    const uidx = (header as string[]).indexOf("User");
-    if (uidx < 0) continue;
-    for (const r of rows) {
-      const u = (r as unknown[])[uidx] as string | null;
-      if (EXCLUDED_USERS.has(u)) continue;
-      if (!u) continue;
-      contrib[u] = (contrib[u] || 0) + 1;
+      updatesData = {
+        total: rows.length,
+        byAction,
+        byChangeSource: byChangeSourceFiltered,
+        contributors: getContributors(rows, header),
+        weekly: computeWeekly(rows, periodStart),
+      };
     }
   }
-  const topContributors = counterMostCommon(contrib);
 
-  const weekly: Record<string, number> = {};
+  // ---- Imports ----
+  let importsData: ImportsData | null = null;
+  {
+    const { header, rows } = sheets["Imports"];
+    if (rows.length > 0) {
+      const typeIdx = header.indexOf("Import Type");
+      const processedIdx = header.indexOf("Processed Count");
+      const byType = sorted(
+        counter(rows.map((r) => (typeIdx >= 0 ? (r as unknown[])[typeIdx] : null)))
+      );
+      let processedTotal = 0;
+      if (processedIdx >= 0) {
+        for (const r of rows) {
+          const v = (r as unknown[])[processedIdx];
+          if (typeof v === "number") processedTotal += v;
+          else if (typeof v === "string") {
+            const n = parseFloat(v);
+            if (!isNaN(n)) processedTotal += n;
+          }
+        }
+      }
+      importsData = {
+        total: rows.length,
+        byType,
+        processedTotal,
+        contributors: getContributors(rows, header),
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- Syndications ----
+  let syndicationsData: SyndicationsData | null = null;
+  {
+    const { header, rows } = sheets["Syndications"];
+    if (rows.length > 0) {
+      const statusIdx = header.indexOf("Status");
+      const synTypeIdx = header.indexOf("Syndication Type");
+      const byStatus = statusIdx >= 0
+        ? counter(rows.map((r) => (r as unknown[])[statusIdx]))
+        : {};
+      const bySyndicationType = synTypeIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[synTypeIdx])))
+        : [];
+      const successStatuses = new Set(["ACCEPTED", "PARTIAL ACCEPTED"]);
+      let success = 0;
+      for (const [k, v] of Object.entries(byStatus)) {
+        if (successStatuses.has(k)) success += v;
+      }
+      const successRate = rows.length ? success / rows.length : 0;
+      syndicationsData = {
+        total: rows.length,
+        byStatus,
+        bySyndicationType,
+        successRate,
+        contributors: getContributors(rows, header),
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- Files Uploaded ----
+  let filesUploadedData: FilesUploadedData | null = null;
+  {
+    const { header, rows } = sheets["Files Uploaded"];
+    if (rows.length > 0) {
+      const domainIdx = header.indexOf("Domain");
+      const byDomain = domainIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[domainIdx]))).slice(0, 10)
+        : [];
+      filesUploadedData = {
+        total: rows.length,
+        byDomain,
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- Products Created ----
+  let productsCreatedData: ProductsCreatedData | null = null;
+  {
+    const { header, rows } = sheets["Products Created"];
+    if (rows.length > 0) {
+      const domainIdx = header.indexOf("Domain");
+      const byDomain = domainIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[domainIdx])))
+        : [];
+      productsCreatedData = {
+        total: rows.length,
+        byDomain,
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- Shares ----
+  let sharesData: SharesData | null = null;
+  {
+    const { header, rows } = sheets["Shares"];
+    if (rows.length > 0) {
+      const actionIdx = header.indexOf("Action");
+      const byAction = actionIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[actionIdx])))
+        : [];
+      sharesData = {
+        total: rows.length,
+        byAction,
+        contributors: getContributors(rows, header),
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- File Downloads ----
+  let fileDownloadsData: FileDownloadsData | null = null;
+  {
+    const { header, rows } = sheets["File Downloads"];
+    if (rows.length > 0) {
+      const fileNameIdx = header.indexOf("File Name");
+      const typeIdx = header.indexOf("Type");
+      const byFileName = fileNameIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[fileNameIdx]))).slice(0, 8)
+        : [];
+      const byType = typeIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[typeIdx])))
+        : [];
+      fileDownloadsData = {
+        total: rows.length,
+        byFileName,
+        byType,
+        contributors: getContributors(rows, header),
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- Product Downloads ----
+  let productDownloadsData: ProductDownloadsData | null = null;
+  {
+    const { header, rows } = sheets["Product Downloads"];
+    if (rows.length > 0) {
+      const productNameIdx = header.indexOf("Product Name");
+      const byProductName = productNameIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[productNameIdx]))).slice(0, 8)
+        : [];
+      productDownloadsData = {
+        total: rows.length,
+        byProductName,
+        contributors: getContributors(rows, header),
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- File Shares ----
+  let fileSharesData: FileSharesData | null = null;
+  {
+    const { header, rows } = sheets["File Shares"];
+    if (rows.length > 0) {
+      const shareTypeIdx = header.indexOf("Share Type");
+      const senderIdx = header.indexOf("Sender");
+      const byShareType = shareTypeIdx >= 0
+        ? sorted(counter(rows.map((r) => (r as unknown[])[shareTypeIdx])))
+        : [];
+      const bySender = senderIdx >= 0
+        ? sorted(counter(rows.map((r) => {
+            const v = (r as unknown[])[senderIdx] as string | null;
+            if (EXCLUDED_USERS.has(v)) return null;
+            return v;
+          })))
+        : [];
+      fileSharesData = {
+        total: rows.length,
+        byShareType,
+        bySender,
+        weekly: computeWeekly(rows, periodStart),
+      };
+    }
+  }
+
+  // ---- Global weekly activity (across all content sheets) ----
+  const weeklyAll: Record<string, number> = {};
   for (const sn of [
     "Updates",
     "Imports",
@@ -142,6 +362,9 @@ export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
     "Products Created",
     "Files Uploaded",
     "Shares",
+    "File Downloads",
+    "Product Downloads",
+    "File Shares",
   ]) {
     const { rows } = sheets[sn];
     for (const r of rows) {
@@ -155,12 +378,37 @@ export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
         periodStart.getTime() + weekIdx * 7 * 86400000
       );
       const key = dayKey(weekStart);
-      weekly[key] = (weekly[key] || 0) + 1;
+      weeklyAll[key] = (weeklyAll[key] || 0) + 1;
     }
   }
-  const weeklyActivity = Object.entries(weekly).sort((a, b) =>
+  const weeklyActivity = Object.entries(weeklyAll).sort((a, b) =>
     a[0].localeCompare(b[0])
   );
+
+  // ---- Top contributors (combined) ----
+  const contrib: Record<string, number> = {};
+  for (const sn of ["Updates", "Imports", "Syndications"]) {
+    const { header, rows } = sheets[sn];
+    const uidx = header.indexOf("User");
+    if (uidx < 0) continue;
+    for (const r of rows) {
+      const u = (r as unknown[])[uidx] as string | null;
+      if (EXCLUDED_USERS.has(u)) continue;
+      if (!u) continue;
+      contrib[u] = (contrib[u] || 0) + 1;
+    }
+  }
+  const topContributors = counterMostCommon(contrib);
+
+  // ---- Totals ----
+  const updatesTotal = updatesData?.total ?? 0;
+  const importsTotal = importsData?.total ?? 0;
+  const syndicationsTotal = syndicationsData?.total ?? 0;
+  const filesUploadedTotal = filesUploadedData?.total ?? 0;
+  const productsCreatedTotal = productsCreatedData?.total ?? 0;
+  const sharesTotal = sharesData?.total ?? 0;
+  const fileDownloadsTotal = fileDownloadsData?.total ?? 0;
+  const productDownloadsTotal = productDownloadsData?.total ?? 0;
 
   const clientSideActivityTotal =
     fileDownloadsTotal + productDownloadsTotal + sharesTotal;
@@ -168,30 +416,26 @@ export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
     updatesTotal +
     importsTotal +
     syndicationsTotal +
-    productsCreated +
-    filesUploaded +
+    productsCreatedTotal +
+    filesUploadedTotal +
     sharesTotal;
 
   return {
     period_start: periodStart,
     period_end: periodEnd,
-    products_created: productsCreated,
-    files_uploaded: filesUploaded,
-    updates_total: updatesTotal,
-    update_action_breakdown: updateActionBreakdown,
-    imports_total: importsTotal,
-    import_type_breakdown: importTypeBreakdown,
-    syndications_total: syndicationsTotal,
-    syndication_status_breakdown: syndicationStatusBreakdown,
-    syndication_success_rate: syndicationSuccessRate,
-    shares_total: sharesTotal,
-    file_shares_total: fileSharesTotal,
-    file_downloads_total: fileDownloadsTotal,
-    product_downloads_total: productDownloadsTotal,
-    top_contributors: topContributors,
-    weekly_activity: weeklyActivity,
-    client_side_activity_total: clientSideActivityTotal,
     total_platform_actions: totalPlatformActions,
+    client_side_activity_total: clientSideActivityTotal,
+    weekly_activity: weeklyActivity,
+    top_contributors: topContributors,
+    updates: updatesData,
+    imports: importsData,
+    syndications: syndicationsData,
+    files_uploaded: filesUploadedData,
+    products_created: productsCreatedData,
+    shares: sharesData,
+    file_downloads: fileDownloadsData,
+    product_downloads: productDownloadsData,
+    file_shares: fileSharesData,
   };
 }
 
@@ -209,8 +453,17 @@ export function fmtDate(d: Date | null): string {
     : "-";
 }
 
+export function fmtDateShort(d: Date | null): string {
+  return d
+    ? d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    : "-";
+}
+
 export function counterMostCommonExport(
   c: Record<string, number>
 ): [string, number][] {
-  return counterMostCommon(c);
+  return Object.entries(c).sort((a, b) => b[1] - a[1]);
 }
