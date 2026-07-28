@@ -309,6 +309,24 @@ body {
 .detail-block {
   flex: 1 1 45%;
   min-width: 255px;
+  max-width: 100%;
+}
+
+/* Keep long filenames inside their own column in screen and PDF layouts. */
+.breakdown-table {
+  table-layout: fixed;
+}
+
+.breakdown-table td.detail-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakdown-table td.num {
+  width: 52px;
+  padding-left: 8px;
+  white-space: nowrap;
 }
 
 /* Donut */

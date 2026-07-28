@@ -41,11 +41,11 @@ function BreakdownTable({ entries, limit, minRows = 1 }: { entries: [string, num
   const rows = limit ? entries.slice(0, limit) : entries;
   if (rows.length <= minRows) return null;
   return (
-    <table className="detail-table">
+    <table className="detail-table breakdown-table">
       <tbody>
         {rows.map(([k, v]) => (
           <tr key={k}>
-            <td>{k}</td>
+            <td className="detail-label" title={k}>{k}</td>
             <td className="num">{fmtNum(v)}</td>
           </tr>
         ))}
@@ -466,6 +466,21 @@ export default function Report({ metrics: m, config }: ReportProps) {
                   <BreakdownTable entries={m.file_downloads.byFileName} />
                 </div>
               )}
+              {m.file_downloads.weekly.length > 0 && (
+                <div className="detail-block">
+                  <div className="section-title">By Week</div>
+                  <BreakdownTable
+                    entries={m.file_downloads.weekly.map(([key, value]) => {
+                      const date = new Date(`${key}T00:00:00`);
+                      return [
+                        `Week of ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+                        value,
+                      ];
+                    })}
+                    minRows={0}
+                  />
+                </div>
+              )}
               {/* Only show By Type if there are multiple types */}
               {m.file_downloads.byType.length > 1 && (
                 <div className="detail-block">
@@ -500,6 +515,21 @@ export default function Report({ metrics: m, config }: ReportProps) {
                 <div className="detail-block">
                   <div className="section-title">Top Products</div>
                   <BreakdownTable entries={m.product_downloads.byProductName} />
+                </div>
+              )}
+              {m.product_downloads.weekly.length > 0 && (
+                <div className="detail-block">
+                  <div className="section-title">By Week</div>
+                  <BreakdownTable
+                    entries={m.product_downloads.weekly.map(([key, value]) => {
+                      const date = new Date(`${key}T00:00:00`);
+                      return [
+                        `Week of ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+                        value,
+                      ];
+                    })}
+                    minRows={0}
+                  />
                 </div>
               )}
               {m.product_downloads.contributors.length > 0 && (
