@@ -10,6 +10,8 @@ import type {
   FileDownloadsData,
   ProductDownloadsData,
   FileSharesData,
+  UsersData,
+  UserRow,
 } from "./types";
 
 const EXCLUDED_USERS = new Set([null, "", "System Generated", "Support Team"]);
@@ -23,6 +25,18 @@ const SHEET_NAMES = [
   "Products Created",
   "Files Uploaded",
   "File Shares",
+  "Active Users",
+];
+
+// Sheets that carry a per-row "Regions" (Org Unit access) + "User Role"
+// snapshot alongside the acting user. Every row for a given user repeats
+// their access as of that action, so the most recent row per user is that
+// user's current Org Unit access -- it is not something tied to a specific
+// file/product.
+const ORG_UNIT_ACCESS_SHEETS: { name: string; userCols: string[] }[] = [
+  { name: "File Downloads", userCols: ["User"] },
+  { name: "Product Downloads", userCols: ["User"] },
+  { name: "File Shares", userCols: ["Sender", "User Email"] },
 ];
 
 function sheetRows(
@@ -353,6 +367,101 @@ export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
     }
   }
 
+  // ---- Users (total activity + Org Unit access per user) ----
+  // The export spells the same person's name inconsistently across sheets
+  // (extra whitespace, different capitalization -- e.g. "Kendall Lavaque" vs
+  // "Kendall LaVaque"), so rows are grouped by a normalized key and the
+  // display spelling favors whatever "Active Users" (the canonical roster)
+  // used, falling back to the first spelling seen elsewhere.
+  let usersData: UsersData | null = null;
+  {
+    const userKey = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
+    const displayNames: Record<string, string> = {};
+    const claimDisplayName = (name: string, authoritative: boolean) => {
+      const key = userKey(name);
+      if (authoritative || !displayNames[key]) displayNames[key] = name.trim().replace(/\s+/g, " ");
+      return key;
+    };
+
+    const { header, rows } = sheets["Active Users"];
+    const nameIdx = header.indexOf("User Name");
+    const actionIdx = header.indexOf("Action");
+    const countIdx = header.indexOf("Count");
+
+    const totals: Record<string, { total: number; byAction: Record<string, number> }> = {};
+    if (nameIdx >= 0) {
+      for (const r of rows) {
+        const row = r as unknown[];
+        const name = row[nameIdx] as string | null;
+        if (EXCLUDED_USERS.has(name) || !name) continue;
+        const key = claimDisplayName(name, true);
+        const action = actionIdx >= 0 ? String(row[actionIdx] ?? "") : "";
+        const rawCount = countIdx >= 0 ? row[countIdx] : 1;
+        const count = typeof rawCount === "number" ? rawCount : parseFloat(String(rawCount)) || 0;
+        if (!totals[key]) totals[key] = { total: 0, byAction: {} };
+        totals[key].total += count;
+        if (action) totals[key].byAction[action] = (totals[key].byAction[action] || 0) + count;
+      }
+    }
+
+    // Most recent Org Unit access ("Regions") + role snapshot per user,
+    // pulled from whichever client-facing sheets carry it. Rows for a user
+    // not in Active Users (rare) are also counted here as a fallback total.
+    const access: Record<string, { date: Date | null; orgUnits: string[]; role: string | null }> = {};
+    const fallbackCounts: Record<string, number> = {};
+
+    for (const { name: sheetName, userCols } of ORG_UNIT_ACCESS_SHEETS) {
+      const { header: h2, rows: r2 } = sheets[sheetName];
+      if (!r2.length) continue;
+      let uidx = -1;
+      for (const c of userCols) {
+        const idx = h2.indexOf(c);
+        if (idx >= 0) { uidx = idx; break; }
+      }
+      if (uidx < 0) continue;
+      const regionsIdx = h2.indexOf("Regions");
+      const roleIdx = h2.indexOf("User Role");
+
+      for (const r of r2) {
+        const row = r as unknown[];
+        const user = row[uidx] as string | null;
+        if (EXCLUDED_USERS.has(user) || !user) continue;
+        const key = claimDisplayName(user, false);
+        fallbackCounts[key] = (fallbackCounts[key] || 0) + 1;
+
+        if (regionsIdx < 0) continue;
+        const regionsRaw = row[regionsIdx] as string | null;
+        if (!regionsRaw) continue;
+        const orgUnits = regionsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+        const role = roleIdx >= 0 ? (row[roleIdx] as string | null) : null;
+        const d = toDate(row[0]);
+        const prev = access[key];
+        if (!prev || (d && (!prev.date || d.getTime() >= prev.date.getTime()))) {
+          access[key] = { date: d, orgUnits, role: role || null };
+        }
+      }
+    }
+
+    const allKeys = new Set<string>([...Object.keys(totals), ...Object.keys(access)]);
+    const rowsOut: UserRow[] = [...allKeys]
+      .map((key) => {
+        const agg = totals[key];
+        const acc = access[key];
+        return {
+          user: displayNames[key] || key,
+          totalActions: agg ? agg.total : (fallbackCounts[key] || 0),
+          byAction: agg ? sorted(agg.byAction) : [],
+          orgUnits: acc ? acc.orgUnits : null,
+          userRole: acc ? acc.role : null,
+        };
+      })
+      .sort((a, b) => b.totalActions - a.totalActions);
+
+    if (rowsOut.length) {
+      usersData = { total: rowsOut.length, rows: rowsOut };
+    }
+  }
+
   // ---- Global weekly activity (across all content sheets) ----
   const weeklyAll: Record<string, number> = {};
   for (const sn of [
@@ -441,6 +550,7 @@ export function parseWorkbook(wb: XLSX.WorkBook): Metrics {
     file_downloads: fileDownloadsData,
     product_downloads: productDownloadsData,
     file_shares: fileSharesData,
+    users: usersData,
   };
 }
 

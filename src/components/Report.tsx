@@ -24,6 +24,7 @@ const SECTION_COLORS: Record<string, string> = {
   "File Downloads": "#0096fa",
   "Product Downloads": "#1e8a78",
   "File Shares": "#5b6b76",
+  "Active Users": "#0096fa",
 };
 
 interface ReportProps { metrics: Metrics; config: ReportConfig; }
@@ -69,6 +70,40 @@ function ContributorsTable({ contributors, teamNames, sectionTotal, limit = 6 }:
               <td className="name">{name}{isTeam && <span className="pattern-tag">PATTERN</span>}</td>
               <td className="num">{fmtNum(count)}</td>
               <td className="pct">{pct}%</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function UsersTable({ rows, teamNames }: { rows: import("@/lib/types").UserRow[]; teamNames: Set<string> }) {
+  if (!rows.length) return null;
+  return (
+    <table className="detail-table users-table">
+      <thead>
+        <tr>
+          <th className="detail-label">User</th>
+          <th className="num">Actions</th>
+          <th className="detail-label">Org Units</th>
+          <th className="detail-label">Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ user, totalActions, orgUnits, userRole }) => {
+          const isTeam = teamNames.has(user.toLowerCase());
+          const units = orgUnits || [];
+          const shown = units.slice(0, 3).join(", ");
+          const extra = units.length > 3 ? ` +${units.length - 3} more` : "";
+          return (
+            <tr key={user}>
+              <td className="name">{user}{isTeam && <span className="pattern-tag">PATTERN</span>}</td>
+              <td className="num">{fmtNum(totalActions)}</td>
+              <td className="detail-label" title={units.join(", ")}>
+                {units.length ? `${shown}${extra}` : "—"}
+              </td>
+              <td className="detail-label">{userRole || "—"}</td>
             </tr>
           );
         })}
@@ -567,6 +602,31 @@ export default function Report({ metrics: m, config }: ReportProps) {
                   <BreakdownTable entries={m.file_shares.bySender} />
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Active Users ── */}
+      {m.users && m.users.rows.length > 0 && (
+        <div className="sheet-section">
+          <SectionHeader title="Active Users" />
+          <div className="sheet-section-body">
+            <div className="sheet-stat-row">
+              <div className="sheet-stat">
+                <div className="sheet-stat-num">{fmtNum(m.users.total)}</div>
+                <div className="sheet-stat-label">users who accessed PXM and performed an action</div>
+              </div>
+            </div>
+            <div className="detail-grid">
+              <div className="detail-block">
+                <div className="section-title">By User</div>
+                <UsersTable rows={m.users.rows} teamNames={teamNames} />
+                <div className="chart-caption">
+                  Org Units reflect each user&apos;s most recent access as seen in file/product downloads and file shares.
+                  Users who only appear via API-driven activity (updates, imports, syndications) have no Org Unit access on record.
+                </div>
+              </div>
             </div>
           </div>
         </div>
