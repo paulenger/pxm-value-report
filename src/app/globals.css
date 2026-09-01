@@ -427,6 +427,21 @@ body {
   letter-spacing: 0.03em;
 }
 
+.users-table th {
+  text-align: left;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px 4px 0;
+  border-bottom: 1px solid #eef1f2;
+}
+
+.users-table th.num {
+  text-align: right;
+}
+
 /* Team note */
 .team-note {
   background: #fbf6ec;

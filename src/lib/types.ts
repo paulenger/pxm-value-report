@@ -55,6 +55,17 @@ export interface FileSharesData {
   bySender: [string, number][];
   weekly: [string, number][];
 }
+export interface UserRow {
+  user: string;
+  totalActions: number;
+  byAction: [string, number][];
+  orgUnits: string[] | null;
+  userRole: string | null;
+}
+export interface UsersData {
+  total: number;
+  rows: UserRow[];
+}
 export interface Metrics {
   period_start: Date | null;
   period_end: Date | null;
@@ -71,6 +82,7 @@ export interface Metrics {
   file_downloads: FileDownloadsData | null;
   product_downloads: ProductDownloadsData | null;
   file_shares: FileSharesData | null;
+  users: UsersData | null;
 }
 
 export interface ReportConfig {
