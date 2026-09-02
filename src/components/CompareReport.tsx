@@ -64,6 +64,11 @@ export default function CompareReport({
       b: mB.total_platform_actions,
     },
     {
+      label: "Active Users",
+      a: mA.users?.total ?? 0,
+      b: mB.users?.total ?? 0,
+    },
+    {
       label: "Files Uploaded",
       a: mA.files_uploaded?.total ?? 0,
       b: mB.files_uploaded?.total ?? 0,

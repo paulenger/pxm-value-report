@@ -552,6 +552,10 @@ body {
   text-align: right;
 }
 
+.users-table td.num {
+  padding-right: 10px;
+}
+
 /* Team note */
 .team-note {
   background: #fbf6ec;
